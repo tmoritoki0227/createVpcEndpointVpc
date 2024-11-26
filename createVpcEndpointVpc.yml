@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: CloudFormation template to create VPC, private subnets, security group, and multiple VPC endpoints.
 
-
 Parameters:
   VpcName:
     Type: String
