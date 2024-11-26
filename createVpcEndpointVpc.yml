@@ -1,0 +1,168 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template to create VPC, private subnets, security group, and multiple VPC endpoints.
+
+Parameters:
+  VpcName:
+    Type: String
+    Description: Choose the name of the VPC.
+    AllowedValues:
+      - envname01-vpcendpoint
+      - envname02-vpcendpoint
+      - envname03-vpcendpoint
+      - envname04-vpcendpoint
+      - envname05-vpcendpoint
+      - envname06-vpcendpoint
+      - envname07-vpcendpoint
+      - envname08-vpcendpoint
+      - envname09-vpcendpoint
+      - envname10-vpcendpoint
+    ConstraintDescription: Must be one of the predefined VPC names.
+
+  VpcCidrBlock:
+    Type: String
+    Description: Choose the CIDR block for the VPC.
+    AllowedValues:
+      - "10.200.0.0/16"
+      - "10.201.0.0/16"
+      - "10.202.0.0/16"
+      - "10.203.0.0/16"
+      - "10.204.0.0/16"
+      - "10.205.0.0/16"
+      - "10.206.0.0/16"
+      - "10.207.0.0/16"
+      - "10.208.0.0/16"
+      - "10.209.0.0/16"
+    ConstraintDescription: Must be one of the predefined CIDR blocks.
+
+  Subnet1CidrBlock:
+    Type: String
+    Description: Choose the CIDR block for the first private subnet.
+    AllowedValues:
+      - "10.200.1.0/24"
+      - "10.201.1.0/24"
+      - "10.202.1.0/24"
+      - "10.203.1.0/24"
+      - "10.204.1.0/24"
+      - "10.205.1.0/24"
+      - "10.206.1.0/24"
+      - "10.207.1.0/24"
+      - "10.208.1.0/24"
+      - "10.209.1.0/24"
+    ConstraintDescription: Must be one of the predefined CIDR blocks.
+
+  Subnet2CidrBlock:
+    Type: String
+    Description: Choose the CIDR block for the second private subnet.
+    AllowedValues:
+      - "10.200.2.0/24"
+      - "10.201.2.0/24"
+      - "10.202.2.0/24"
+      - "10.203.2.0/24"
+      - "10.204.2.0/24"
+      - "10.205.2.0/24"
+      - "10.206.2.0/24"
+      - "10.207.2.0/24"
+      - "10.208.2.0/24"
+      - "10.209.2.0/24"
+    ConstraintDescription: Must be one of the predefined CIDR blocks.
+
+  InboundSource:
+    Type: String
+    Description: Choose the CIDR block for HTTPS inbound traffic.
+    AllowedValues:
+      - "10.100.0.0/16"
+      - "10.101.0.0/16"
+      - "10.102.0.0/16"
+      - "10.103.0.0/16"
+      - "10.104.0.0/16"
+      - "10.105.0.0/16"
+      - "10.106.0.0/16"
+      - "10.107.0.0/16"
+      - "10.108.0.0/16"
+      - "10.109.0.0/16"
+    ConstraintDescription: Must be one of the predefined CIDR blocks.
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref VpcName
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet1CidrBlock
+      AvailabilityZone: ap-northeast-1a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${VpcName}-subnet-private1-ap-northeast-1a"
+            - {}
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet2CidrBlock
+      AvailabilityZone: ap-northeast-1c
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${VpcName}-subnet-private2-ap-northeast-1c"
+            - {}
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for VPC endpoints
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref InboundSource
+      SecurityGroupEgress: []  # No outbound rules
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${VpcName}-sg"
+            - {}
+
+  VPCEndpointS3:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: com.amazonaws.ap-northeast-1.s3
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
+      PrivateDnsEnabled: true
+
+  VPCEndpointDynamoDB:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: com.amazonaws.ap-northeast-1.dynamodb
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
+      PrivateDnsEnabled: true
+
+Outputs:
+  VPCID:
+    Description: The ID of the created VPC
+    Value: !Ref VPC
